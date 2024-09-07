@@ -23,9 +23,15 @@
           {
             languages = {
               nix.enable = true;
-                    rust.enable = true;
+              rust.enable = true;
+              haskell = {
+                enable = true;
+                languageServer = pkgs.haskell-language-server.override {
+                  supportedGhcVersions = ["927"];
+                };
+              };
             };
-            packages = with pkgs; [ exercism ];
+            packages = with pkgs; [exercism alejandra] ++ (with pkgs.haskellPackages; [hoogle]);
           }
         ];
       };
