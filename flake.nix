@@ -31,7 +31,9 @@
                 };
               };
             };
-            packages = with pkgs; [exercism alejandra] ++ (with pkgs.haskellPackages; [hoogle]);
+            packages = with pkgs;
+              [exercism alejandra]
+              ++ (with pkgs.haskellPackages; [hoogle floskell]);
           }
         ];
       };
