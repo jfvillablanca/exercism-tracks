@@ -23,6 +23,7 @@
           {
             languages = {
               nix.enable = true;
+              go.enable = true;
               rust.enable = true;
               haskell = {
                 enable = true;
@@ -32,7 +33,11 @@
               };
             };
             packages = with pkgs;
-              [exercism alejandra]
+              [
+                exercism
+                alejandra
+                gofumpt
+              ]
               ++ (with pkgs.haskellPackages; [hoogle floskell]);
           }
         ];
