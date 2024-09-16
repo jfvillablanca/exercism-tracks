@@ -38,7 +38,11 @@
                 alejandra
                 gofumpt
               ]
-              ++ (with pkgs.haskellPackages; [hoogle floskell]);
+              ++ (with pkgs.haskellPackages; [
+                hoogle
+                hindent
+                hlint
+              ]);
           }
         ];
       };
