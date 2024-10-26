@@ -55,7 +55,7 @@
                 hlint
               ])
               ++ (with easy-ps; [
-                purs-0_15_8
+                purs-0_14_7
                 spago
                 purescript-language-server
                 purs-tidy
