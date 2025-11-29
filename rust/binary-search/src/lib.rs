@@ -9,7 +9,7 @@ fn find_(xs: &[i32], key: i32, lo: usize, hi: usize) -> Option<usize> {
     }
     let mid = (hi + lo) / 2;
 
-    if len % 2 == 0 {
+    if len.is_multiple_of(2) {
         match key.cmp(&xs[mid]) {
             std::cmp::Ordering::Less => find_(xs, key, lo, mid),
             _ => find_(xs, key, mid, hi),
