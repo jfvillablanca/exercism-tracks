@@ -30,9 +30,6 @@
               rust.enable = true;
               haskell = {
                 enable = true;
-                languageServer = pkgs.haskell-language-server.override {
-                  supportedGhcVersions = ["927"];
-                };
               };
             };
             packages = with pkgs;
@@ -51,7 +48,6 @@
               ]
               ++ (with pkgs.haskellPackages; [
                 hoogle
-                hindent
                 hlint
               ])
               ++ (with easy-ps; [
