@@ -1,31 +1,37 @@
 /// Check a Luhn checksum.
 pub fn is_valid(code: &str) -> bool {
-    let nums: Vec<char> = code
-        .chars()
-        .filter(|&x| !x.is_ascii_whitespace())
-        .collect();
+    let nums = parse_digits(code);
 
-    if nums.len() <= 1 {
+    if nums.iter().eq(vec![&0]) || nums.is_empty() {
         return false;
     }
 
-    let nums = nums.iter().map(|x| x.to_digit(10));
+    nums.iter()
+        .rev()
+        .enumerate()
+        .map(|(i, &x)| {
+            if (i + 1).is_multiple_of(2) {
+                let double = x * 2;
+                if double > 9 {
+                    return double - 9;
+                };
+                return double;
+            }
+            x
+        })
+        .sum::<u32>()
+        .is_multiple_of(10)
+}
 
-    if nums.clone().any(|x| x.is_none()) {
-        return false;
-    }
+fn parse_digits(code: &str) -> Vec<u32> {
+    let mut v = Vec::new();
 
-    let nums = nums.flatten().rev().enumerate().map(|(i, x)| {
-        if (i + 1).is_multiple_of(2) {
-            dbg!(i, x);
-            let double = x * 2;
-            if double > 9 {
-                return double - 9;
-            };
-            return double;
+    for c in code.chars() {
+        match c {
+            '0'..='9' => v.push(c.to_digit(10).unwrap()),
+            c if c.is_ascii_whitespace() => {}
+            _ => return Vec::new()
         }
-        x
-    });
-
-    nums.sum::<u32>().is_multiple_of(10)
+    }
+    v
 }
