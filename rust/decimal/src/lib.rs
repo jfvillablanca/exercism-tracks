@@ -14,7 +14,6 @@ pub struct Decimal {
     significand: Vec<u8>,
     /// Canonical form, minimum scale of 1
     scale: usize,
-
     /// Sign bit
     is_negative: bool,
 }
@@ -60,18 +59,20 @@ impl Decimal {
 
         for (leading, next_leading) in rev_significand_iter {
             match (leading, next_leading) {
-                (0, 0) if { significand.len() > 2 } => significand.pop_back(),
-                (0, _) if { significand.len() > 2 } => significand.pop_back(),
+                (0, 0) if significand.len() > moving_scale => {
+                    significand.pop_back()
+                }
+                (0, x) if x != 0 && significand.len() > 2 => {
+                    significand.pop_back()
+                }
+                (0, _) if moving_scale == 1 => {
+                    significand.pop_back()
+                }
                 _ => {
                     break;
                 }
             };
         }
-
-        // Invariant on canonical form
-        // Example: zero is Decimal { [0, 0], 1, false }
-        assert!(significand.len() >= 2);
-        assert!(moving_scale >= 1);
 
         Decimal {
             significand: significand.into_iter().collect(),
@@ -166,7 +167,8 @@ impl PartialOrd for Decimal {
                     .chain(&self.significand)
                     .copied()
                     .collect(),
-                other.significand
+                other
+                    .significand
                     .clone()
                     .into_iter()
                     .chain(vec![0; other.scale.sub(self.scale)])
@@ -178,9 +180,17 @@ impl PartialOrd for Decimal {
                 other.significand.clone().into_iter().rev().collect(),
             ),
         };
-
-        self_denormalized_significand_msb
-            .partial_cmp(&other_denormalized_significand_msb)
+        match (
+            self_denormalized_significand_msb
+                .cmp(&other_denormalized_significand_msb),
+            self.is_negative,
+        ) {
+            (Ordering::Greater, true) => Some(Ordering::Less),
+            (Ordering::Greater, false) => Some(Ordering::Greater),
+            (Ordering::Less, true) => Some(Ordering::Greater),
+            (Ordering::Less, false) => Some(Ordering::Less),
+            _ => Some(Ordering::Equal),
+        }
     }
 }
 
