@@ -120,55 +120,39 @@ impl Decimal {
         rhs: &Decimal,
         is_msb: bool,
     ) -> (Vec<u8>, Vec<u8>) {
-        let max_frac_count = lhs.scale.max(rhs.scale);
-        let min_frac_count = lhs.scale.min(rhs.scale);
-        let max_int_count = (lhs.significand.len() - lhs.scale)
+        let max_frac = lhs.scale.max(rhs.scale);
+        let min_frac = lhs.scale.min(rhs.scale);
+        let max_int = (lhs.significand.len() - lhs.scale)
             .max(rhs.significand.len() - rhs.scale);
-        let min_int_count = (lhs.significand.len() - lhs.scale)
+        let min_int = (lhs.significand.len() - lhs.scale)
             .min(rhs.significand.len() - rhs.scale);
 
-        let right_pad: Vec<u8> = vec![0; max_frac_count - min_frac_count];
-        let left_pad: Vec<u8> = vec![0; max_int_count - min_int_count];
+        let right_pad = vec![0; max_frac - min_frac];
+        let left_pad = vec![0; max_int - min_int];
 
-        let lhs_unpadded: Vec<u8> =
-            lhs.significand.clone().into_iter().rev().collect();
-        let rhs_unpadded: Vec<u8> =
-            rhs.significand.clone().into_iter().rev().collect();
+        let lhs_rev: Vec<u8> = lhs.significand.iter().copied().rev().collect();
+        let rhs_rev: Vec<u8> = rhs.significand.iter().copied().rev().collect();
 
-        match (lhs.scale.cmp(&rhs.scale), is_msb) {
-            (Ordering::Greater, true) => (
-                [left_pad.clone(), lhs_unpadded.clone()].concat(),
-                [rhs_unpadded.clone(), right_pad.clone()].concat(),
-            ),
-            (Ordering::Greater, false) => (
-                [left_pad.clone(), lhs_unpadded.clone()]
-                    .concat()
-                    .into_iter()
-                    .rev()
-                    .collect(),
-                [rhs_unpadded.clone(), right_pad.clone()]
-                    .concat()
-                    .into_iter()
-                    .rev()
-                    .collect(),
-            ),
-            (Ordering::Less, true) => (
-                [lhs_unpadded.clone(), right_pad.clone()].concat(),
-                [left_pad.clone(), rhs_unpadded.clone()].concat(),
-            ),
-            (Ordering::Less, false) => (
-                [lhs_unpadded.clone(), right_pad.clone()]
-                    .concat()
-                    .into_iter()
-                    .rev()
-                    .collect(),
-                [left_pad.clone(), rhs_unpadded.clone()]
-                    .concat()
-                    .into_iter()
-                    .rev()
-                    .collect(),
-            ),
-            _ => (lhs_unpadded, rhs_unpadded),
+        let apply_rev = |v: Vec<u8>| {
+            if is_msb {
+                v
+            } else {
+                v.into_iter().rev().collect()
+            }
+        };
+
+        match lhs.scale.cmp(&rhs.scale) {
+            Ordering::Greater => {
+                let lhs_out = [left_pad.clone(), lhs_rev.clone()].concat();
+                let rhs_out = [rhs_rev.clone(), right_pad.clone()].concat();
+                (apply_rev(lhs_out), apply_rev(rhs_out))
+            }
+            Ordering::Less => {
+                let lhs_out = [lhs_rev.clone(), right_pad.clone()].concat();
+                let rhs_out = [left_pad.clone(), rhs_rev.clone()].concat();
+                (apply_rev(lhs_out), apply_rev(rhs_out))
+            }
+            Ordering::Equal => (apply_rev(lhs_rev), apply_rev(rhs_rev)),
         }
     }
 }
