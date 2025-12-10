@@ -65,9 +65,7 @@ impl Decimal {
                 (0, x) if x != 0 && significand.len() > 2 => {
                     significand.pop_back()
                 }
-                (0, _) if moving_scale == 1 => {
-                    significand.pop_back()
-                }
+                (0, _) if moving_scale == 1 => significand.pop_back(),
                 _ => {
                     break;
                 }
@@ -116,6 +114,63 @@ impl Decimal {
 
         scale
     }
+
+    fn denormalize_for_operation(
+        lhs: &Decimal,
+        rhs: &Decimal,
+        is_msb: bool,
+    ) -> (Vec<u8>, Vec<u8>) {
+        let max_frac_count = lhs.scale.max(rhs.scale);
+        let min_frac_count = lhs.scale.min(rhs.scale);
+        let max_int_count = (lhs.significand.len() - lhs.scale)
+            .max(rhs.significand.len() - rhs.scale);
+        let min_int_count = (lhs.significand.len() - lhs.scale)
+            .min(rhs.significand.len() - rhs.scale);
+
+        let right_pad: Vec<u8> = vec![0; max_frac_count - min_frac_count];
+        let left_pad: Vec<u8> = vec![0; max_int_count - min_int_count];
+
+        let lhs_unpadded: Vec<u8> =
+            lhs.significand.clone().into_iter().rev().collect();
+        let rhs_unpadded: Vec<u8> =
+            rhs.significand.clone().into_iter().rev().collect();
+
+        match (lhs.scale.cmp(&rhs.scale), is_msb) {
+            (Ordering::Greater, true) => (
+                [left_pad.clone(), lhs_unpadded.clone()].concat(),
+                [rhs_unpadded.clone(), right_pad.clone()].concat(),
+            ),
+            (Ordering::Greater, false) => (
+                [left_pad.clone(), lhs_unpadded.clone()]
+                    .concat()
+                    .into_iter()
+                    .rev()
+                    .collect(),
+                [rhs_unpadded.clone(), right_pad.clone()]
+                    .concat()
+                    .into_iter()
+                    .rev()
+                    .collect(),
+            ),
+            (Ordering::Less, true) => (
+                [lhs_unpadded.clone(), right_pad.clone()].concat(),
+                [left_pad.clone(), rhs_unpadded.clone()].concat(),
+            ),
+            (Ordering::Less, false) => (
+                [lhs_unpadded.clone(), right_pad.clone()]
+                    .concat()
+                    .into_iter()
+                    .rev()
+                    .collect(),
+                [left_pad.clone(), rhs_unpadded.clone()]
+                    .concat()
+                    .into_iter()
+                    .rev()
+                    .collect(),
+            ),
+            _ => (lhs_unpadded, rhs_unpadded),
+        }
+    }
 }
 
 impl Display for Decimal {
@@ -145,41 +200,7 @@ impl PartialOrd for Decimal {
         let (
             self_denormalized_significand_msb,
             other_denormalized_significand_msb,
-        ): (Vec<u8>, Vec<u8>) = match self.scale.cmp(&other.scale) {
-            Ordering::Greater => (
-                self.significand
-                    .clone()
-                    .into_iter()
-                    .chain(vec![0; self.scale.sub(other.scale)])
-                    .rev()
-                    .collect(),
-                vec![0; self.scale.sub(other.scale)]
-                    .iter()
-                    .rev()
-                    .chain(&other.significand)
-                    .copied()
-                    .collect(),
-            ),
-            Ordering::Less => (
-                vec![0; other.scale.sub(self.scale)]
-                    .iter()
-                    .rev()
-                    .chain(&self.significand)
-                    .copied()
-                    .collect(),
-                other
-                    .significand
-                    .clone()
-                    .into_iter()
-                    .chain(vec![0; other.scale.sub(self.scale)])
-                    .rev()
-                    .collect(),
-            ),
-            _ => (
-                self.significand.clone().into_iter().rev().collect(),
-                other.significand.clone().into_iter().rev().collect(),
-            ),
-        };
+        ) = Decimal::denormalize_for_operation(self, other, true);
         match (
             self_denormalized_significand_msb
                 .cmp(&other_denormalized_significand_msb),
